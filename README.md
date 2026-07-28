@@ -37,10 +37,12 @@ The Game Gear is essentially a portable Master System with:
 
 ## Protocol
 
-Uses RUBP (Rachel Universal Binary Protocol):
+Uses RUBP (Rachel Unified Binary Protocol):
 - 64-byte fixed-size messages
 - 16-byte header with "RACH" magic
 - 48-byte payload
+
+Full specification: [rachel-multiverse/protocol](https://github.com/rachel-multiverse/protocol) — also rendered at <https://rachel.stevehill.xyz/protocol>.
 
 ## Compatibility
 
