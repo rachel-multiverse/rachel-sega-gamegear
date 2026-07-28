@@ -7,7 +7,7 @@ A Rachel card game client for the Sega Game Gear.
 - **CPU**: Zilog Z80 @ 3.58 MHz
 - **RAM**: 8KB
 - **Graphics**: VDP (SMS compatible, 160x144 visible)
-- **Platform ID**: `0x00C4` (196)
+- **Platform ID**: `0x0017` (23)
 - **Player Name**: "GAME GEAR"
 
 ## Building

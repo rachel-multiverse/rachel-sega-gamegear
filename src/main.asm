@@ -3,9 +3,9 @@
 ; Main entry point
 ; =============================================================================
 
-; Platform ID: 0x00C4 (196)
+; Platform ID: 0x0017 (23)
 PLATFORM_ID_HI  equ     $00
-PLATFORM_ID_LO  equ     $C4
+PLATFORM_ID_LO  equ     $17
 
 ; =============================================================================
 ; Memory Map
