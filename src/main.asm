@@ -29,6 +29,7 @@ VDP_STATUS      equ     $BF
 IO_CTRL1        equ     $DC
 IO_CTRL2        equ     $DD
 IO_MEM_CTRL     equ     $3E
+IO_GG_START     equ     $00
 
 ; =============================================================================
 ; Joypad bits (active low)
@@ -39,6 +40,7 @@ JOY_LEFT        equ     2
 JOY_RIGHT       equ     3
 JOY_BTN1        equ     4
 JOY_BTN2        equ     5
+JOY_START       equ     6
 
 ; =============================================================================
 ; RUBP Constants

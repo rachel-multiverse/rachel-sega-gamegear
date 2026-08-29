@@ -297,9 +297,9 @@ not_select:
         call    play_selected_cards
 not_play:
 
-        ; Up = draw
+        ; Start = draw
         ld      a, (joypad_new)
-        bit     JOY_UP, a
+        bit     JOY_START, a
         jr      z, not_draw
         call    send_draw
 not_draw:

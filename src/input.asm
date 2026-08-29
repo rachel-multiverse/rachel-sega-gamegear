@@ -23,6 +23,15 @@ read_joypad:
         ; Invert (buttons are active low)
         cpl
         and     $3F             ; Mask to 6 bits
+        ld      b, a
+
+        ; Game Gear Start is bit 7 (active low) on port $00. Map it to
+        ; joypad bit 6 so it participates in the same edge detection.
+        in      a, (IO_GG_START)
+        cpl
+        and     $80
+        rrca
+        or      b
         ld      (joypad), a
 
         ; Calculate newly pressed buttons
