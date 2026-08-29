@@ -14,7 +14,7 @@
 
 VDP_REG_DATA:
         db      $04             ; R0: Mode Control 1
-        db      $A0             ; R1: Mode Control 2 (display on, VBlank IRQ)
+        db      $E0             ; R1: display on, VBlank IRQ enabled
         db      $FF             ; R2: Name Table at $3800 (>>10 | $F1)
         db      $FF             ; R3: Color table (not used in mode 4)
         db      $FF             ; R4: Pattern generator (not used in mode 4)
@@ -71,9 +71,9 @@ init_palette:
         ld      a, $C0          ; CRAM write
         out     (VDP_CTRL), a
 
-        ; Write palette (16 colors for background)
+        ; Game Gear CRAM stores 16 colours as little-endian 12-bit words.
         ld      hl, palette_data
-        ld      b, 16
+        ld      b, 32
 pal_loop:
         ld      a, (hl)
         out     (VDP_DATA), a
@@ -82,16 +82,8 @@ pal_loop:
         ret
 
 palette_data:
-        db      $00             ; 0: Black (background)
-        db      $3F             ; 1: White (text)
-        db      $03             ; 2: Red
-        db      $30             ; 3: Green
-        db      $0C             ; 4: Blue
-        db      $33             ; 5: Yellow
-        db      $0F             ; 6: Cyan
-        db      $3C             ; 7: Magenta
-        db      $15             ; 8: Gray
-        db      $00, $00, $00, $00, $00, $00, $00  ; 9-15: unused
+        dw      $000, $FFF, $00F, $0F0, $F00, $0FF, $FF0, $F0F
+        dw      $888, $000, $000, $000, $000, $000, $000, $000
 
 ; =============================================================================
 ; Load Font
@@ -114,11 +106,12 @@ char_loop:
         ld      b, 8            ; 8 rows per character
 row_loop:
         ld      a, (hl)
-        ; Write 4 planes for mode 4
-        out     (VDP_DATA), a   ; Plane 0
-        out     (VDP_DATA), a   ; Plane 1
-        out     (VDP_DATA), a   ; Plane 2
-        out     (VDP_DATA), a   ; Plane 3
+        ; Use colour index 1: glyph in plane 0, remaining planes clear.
+        out     (VDP_DATA), a
+        xor     a
+        out     (VDP_DATA), a
+        out     (VDP_DATA), a
+        out     (VDP_DATA), a
         inc     hl
         djnz row_loop
         dec     de

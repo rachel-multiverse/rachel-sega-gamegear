@@ -6,48 +6,7 @@
 ; Process Game State from Network
 ; =============================================================================
 process_game_state:
-        ld      hl, net_buffer_rx + PAYLOAD_START
-        ld      a, (hl)
-        ld      (current_turn), a
-        inc     hl
-        ld      a, (hl)
-        ld      (my_index), a
-        inc     hl
-        ld      a, (hl)
-        ld      (discard_top), a
-        inc     hl
-        ld      a, (hl)
-        ld      (current_suit), a
-        inc     hl
-        ld      a, (hl)
-        ld      (draw_count), a
-        inc     hl
-        ld      a, (hl)
-        ld      (hand_count), a
-        inc     hl
-
-        ; Copy hand cards
-        ld      de, hand_cards
-        ld      b, 20
-copy_hand:
-        ld      a, (hl)
-        ld      (de), a
-        inc     hl
-        inc     de
-        djnz copy_hand
-
-        ; Clear selection
-        ld      hl, hand_selected
-        ld      b, 20
-        xor     a
-clear_sel:
-        ld      (hl), a
-        inc     hl
-        djnz clear_sel
-
-        xor     a
-        ld      (hand_cursor), a
-        ret
+        jp      parse_game_state
 
 ; =============================================================================
 ; Render Game
@@ -56,8 +15,8 @@ render_game:
         call    clear_screen
 
         ; Discard pile
-        ld      b, 1
-        ld      c, 2
+        ld      b, 7
+        ld      c, 5
         call    set_cursor
         ld      hl, lbl_discard
         call    print_string
@@ -65,8 +24,8 @@ render_game:
         call    print_card
 
         ; Current suit
-        ld      b, 1
-        ld      c, 4
+        ld      b, 7
+        ld      c, 7
         call    set_cursor
         ld      hl, lbl_suit
         call    print_string
@@ -77,8 +36,8 @@ render_game:
         ld      a, (draw_count)
         or      a
         jr      z, no_draw_count
-        ld      b, 1
-        ld      c, 6
+        ld      b, 7
+        ld      c, 9
         call    set_cursor
         ld      hl, lbl_draw
         call    print_string
@@ -86,11 +45,18 @@ render_game:
         call    print_decimal
 
 no_draw_count:
+        ld      b, 7
+        ld      c, 11
+        call    set_cursor
+        ld      hl, lbl_nominate
+        call    print_string
+        ld      a, (nominated_suit)
+        call    print_suit
         ; Render hand
         call    render_hand
 
         ; Status
-        ld      b, 0
+        ld      b, 6
         ld      c, 20
         call    set_cursor
         ld      a, (current_turn)
@@ -110,7 +76,7 @@ show_status:
 ; Render Hand
 ; =============================================================================
 render_hand:
-        ld      b, 0
+        ld      b, 6
         ld      c, 14
         call    set_cursor
 
@@ -118,11 +84,36 @@ render_hand:
         or      a
         ret     z
 
-        push    af
-        ld      de, hand_cards
+        ld      a, (hand_cursor)
+page_start:
+        cp      5
+        jr      c, page_ready
+        sub     5
+        jr      page_start
+page_ready:
+        ld      b, a
+        ld      a, (hand_cursor)
+        sub     b
+        ld      c, a
+        ld      e, a
+        ld      d, 0
+        ld      hl, hand_cards
+        add     hl, de
+        ex      de, hl
         ld      hl, hand_selected
-        xor     a
-        ld      c, a            ; Index
+        ld      a, c
+        add     a, l
+        ld      l, a
+        jr      nc, page_selection_ready
+        inc     h
+page_selection_ready:
+        ld      a, (hand_count)
+        sub     c
+        cp      5
+        jr      c, page_count_ready
+        ld      a, 5
+page_count_ready:
+        ld      b, a
 
 render_loop:
         push    bc
@@ -170,7 +161,6 @@ next_card:
         inc     c
         dec     b
         jr      nz, render_loop
-        pop     af
         ret
 
 ; =============================================================================
@@ -178,14 +168,22 @@ next_card:
 ; =============================================================================
 print_card:
         push    af
-        srl     a
-        srl     a               ; Divide by 4 for rank
+        and     $3F
         ld      hl, ranks
         add     a, l
         ld      l, a
+        jr      nc, rank_ready
+        inc     h
+rank_ready:
         ld      a, (hl)
         call    print_char
         pop     af
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
         and     $03
         call    print_suit
         ret
@@ -197,6 +195,9 @@ print_suit:
         ld      hl, suits
         add     a, l
         ld      l, a
+        jr      nc, suit_ready
+        inc     h
+suit_ready:
         ld      a, (hl)
         call    print_char
         ret
@@ -229,6 +230,20 @@ skip_tens:
 ; Handle Game Input
 ; =============================================================================
 handle_game_input:
+        ld      a, (current_turn)
+        ld      b, a
+        ld      a, (my_index)
+        cp      b
+        ret     nz
+        ld      a, (joypad_new)
+        bit     JOY_DOWN, a
+        jr      z, not_nominate
+        ld      a, (nominated_suit)
+        inc     a
+        and     $03
+        ld      (nominated_suit), a
+        call    render_game
+not_nominate:
         ; Left
         ld      a, (joypad_new)
         bit     JOY_LEFT, a
@@ -266,6 +281,9 @@ not_right:
         ld      hl, hand_selected
         add     a, l
         ld      l, a
+        jr      nc, selection_address_ready
+        inc     h
+selection_address_ready:
         ld      a, (hl)
         xor     $FF
         ld      (hl), a
@@ -306,7 +324,27 @@ find_sel:
         djnz find_sel
         ret
 found_sel:
+        ld      hl, hand_selected
+        ld      de, hand_cards
+        ld      a, (hand_count)
+        ld      b, a
+find_ace:
+        ld      a, (hl)
+        inc     hl
+        or      a
+        jr      z, next_ace
         ld      a, (de)
+        and     $3F
+        cp      14
+        jr      z, use_nomination
+next_ace:
+        inc     de
+        djnz    find_ace
+        ld      a, $FF
+        jr      send_selected
+use_nomination:
+        ld      a, (nominated_suit)
+send_selected:
         call    send_play_card
         ret
 
@@ -314,7 +352,7 @@ found_sel:
 ; Data
 ; =============================================================================
 ranks:
-        db      "A23456789TJQK"
+        db      "??23456789TJQKA"
 suits:
         db      "HDCS"
 
@@ -324,7 +362,9 @@ lbl_suit:
         db      "SUIT:", 0
 lbl_draw:
         db      "DRAW:", 0
+lbl_nominate:
+        db      "ACE SUIT:", 0
 lbl_your_turn:
-        db      "YOUR TURN 1/2/UP", 0
+        db      "1:MARK 2:PLAY", 0
 lbl_waiting:
         db      "WAITING...", 0
